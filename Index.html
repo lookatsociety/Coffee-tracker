@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>COFFEE TRACKER</title>
+    <style>
+        :root {
+            --notion-light-bg: #ffffff;
+            --dark-bg: #191919;
+            --light-text: #222;
+            --dark-text: #cfcfcf; /* Cambiado para mejor visibilidad en modo oscuro */
+            --button-bg: #e0e0e0;
+            --accent-bg: #333;
+            --highlight: #ffffff;
+            --shadow-light: rgba(0, 0, 0, 0.15);
+            --shadow-dark: rgba(255, 255, 255, 0.05);
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: var(--notion-light-bg);
+            font-family: 'Inter', sans-serif;
+            color: var(--light-text);
+            transition: background 0.3s, color 0.3s;
+        }
+        .tracker-container {
+            padding: 15px;
+            border-radius: 15px;
+            background: var(--highlight);
+            box-shadow: 0 4px 12px var(--shadow-light);
+            text-align: center;
+            width: 260px;
+            max-width: 90%;
+            position: relative;
+        }
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0;
+            position: relative;
+        }
+        .date {
+            font-size: 12px;
+            margin-top: 5px;
+            color: var(--light-text);
+            opacity: 0.8;
+            transition: color 0.3s;
+        }
+        .mode-toggle {
+            width: 16px;
+            height: 16px;
+            border: none;
+            border-radius: 50%;
+            background: var(--button-bg);
+            cursor: pointer;
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 5px;
+            box-shadow: 0 2px 4px var(--shadow-light);
+        }
+        .cup-count {
+            font-size: 32px;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+        .caffeine-mg {
+            font-size: 12px;
+            margin-left: 5px;
+            color: var(--light-text);
+            opacity: 0.8;
+            transition: color 0.3s;
+        }
+        .buttons {
+            display: flex;
+            justify-content: space-between;
+            gap: 5px;
+        }
+        button {
+            flex: 1;
+            padding: 6px;
+            font-size: 12px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button.increment {
+            background: var(--accent-bg);
+            color: var(--highlight);
+        }
+        button.reset {
+            background: var(--button-bg);
+            color: var(--light-text);
+        }
+        .notification {
+            margin-top: 10px;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 12px;
+            display: none;
+        }
+        .warning {
+            background: #ffe082;
+            color: var(--light-text);
+        }
+        .danger {
+            background: #ef5350;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="tracker-container">
+    <h1>Coffee Tracker</h1>
+    <p class="date" id="currentDate"></p>
+    <button class="mode-toggle" id="modeToggle"></button>
+    <div class="cup-count">
+        <span id="cupCount">0</span>
+        <span class="caffeine-mg" id="caffeineMg">(0 mg)</span>
+    </div>
+    <div class="buttons">
+        <button class="increment" onclick="incrementCups()">Agregar</button>
+        <button class="reset" onclick="resetCups()">Reiniciar</button>
+    </div>
+    <div class="notification" id="notification"></div>
+</div>
+
+<script>
+    const cupCountElement = document.getElementById('cupCount');
+    const caffeineMgElement = document.getElementById('caffeineMg');
+    const notificationElement = document.getElementById('notification');
+    const modeToggle = document.getElementById('modeToggle');
+    const currentDateElement = document.getElementById('currentDate');
+    let cupCount = localStorage.getItem('cupCount') ? parseInt(localStorage.getItem('cupCount')) : 0;
+    const caffeinePerCup = 95;
+    const warningLimit = 3;
+    const dangerLimit = 5;
+    let darkMode = localStorage.getItem('darkMode') === 'true';
+
+    function updateDate() {
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        const storedDate = localStorage.getItem('currentDate');
+
+        if (storedDate !== todayString) {
+            localStorage.setItem('currentDate', todayString);
+            resetCups();
+        }
+
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        currentDateElement.textContent = today.toLocaleDateString('es-ES', options);
+    }
+
+    function incrementCups() {
+        cupCount++;
+        localStorage.setItem('cupCount', cupCount);
+        updateDisplay();
+        checkLimits();
+    }
+
+    function resetCups() {
+        cupCount = 0;
+        localStorage.setItem('cupCount', cupCount);
+        updateDisplay();
+        notificationElement.style.display = 'none';
+    }
+
+    function updateDisplay() {
+        cupCountElement.textContent = cupCount;
+        caffeineMgElement.textContent = cupCount > 0 ? `(${cupCount * caffeinePerCup} mg)` : "(0 mg)";
+    }
+
+    function checkLimits() {
+        if (cupCount >= dangerLimit) {
+            notifyUser('Demasiado café. Puedes experimentar ansiedad o insomnio.', 'danger');
+        } else if (cupCount >= warningLimit) {
+            notifyUser('Cuidado: estás cerca del límite recomendado de cafeína.', 'warning');
+        } else {
+            notificationElement.style.display = 'none';
+        }
+    }
+
+    function notifyUser(message, type) {
+        notificationElement.textContent = message;
+        notificationElement.className = `notification ${type}`;
+        notificationElement.style.display = 'block';
+    }
+
+    modeToggle.addEventListener('click', () => {
+        darkMode = !darkMode;
+        if (darkMode) enableDarkMode();
+        else disableDarkMode();
+        localStorage.setItem('darkMode', darkMode);
+    });
+
+    function enableDarkMode() {
+        document.body.style.background = 'var(--dark-bg)';
+        document.body.style.color = 'var(--dark-text)';
+        document.querySelector('.tracker-container').style.background = 'var(--dark-bg)';
+        document.querySelector('.tracker-container').style.boxShadow = `0 4px 12px var(--shadow-dark)`;
+        currentDateElement.style.color = 'white';
+        caffeineMgElement.style.color = 'white';
+    }
+
+    function disableDarkMode() {
+        document.body.style.background = 'var(--notion-light-bg)';
+        document.body.style.color = 'var(--light-text)';
+        document.querySelector('.tracker-container').style.background = 'var(--highlight)';
+        document.querySelector('.tracker-container').style.boxShadow = `0 4px 12px var(--shadow-light)`;
+        currentDateElement.style.color = 'var(--light-text)';
+        caffeineMgElement.style.color = 'var(--light-text)';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        updateDate();
+        updateDisplay();
+        if (darkMode) enableDarkMode();
+    });
+</script>
+
+</body>
+</html>
